@@ -1,0 +1,9 @@
+name = "crosspoint-calendar-task-screen"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Zugangsdaten gehören NICHT in diese Datei. Lege sie als Secrets an:
+#   npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_EMAIL
+#   npx wrangler secret put GOOGLE_PRIVATE_KEY
+#   npx wrangler secret put GOOGLE_CALENDAR_ID
+#   npx wrangler secret put TODOIST_API_TOKEN

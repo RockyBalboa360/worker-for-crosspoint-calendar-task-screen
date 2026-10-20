@@ -1,0 +1,5 @@
+# Kopie als .dev.vars speichern (wird von Git ignoriert) und für "npx wrangler dev" ausfüllen.
+GOOGLE_SERVICE_ACCOUNT_EMAIL=name@projekt.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_CALENDAR_ID=deine.adresse@gmail.com
+TODOIST_API_TOKEN=
