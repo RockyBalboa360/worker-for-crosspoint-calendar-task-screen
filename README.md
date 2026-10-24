@@ -17,9 +17,14 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
   mit **Open-Meteo** als automatischem Ersatz; optional Visual Crossing als dritte Reserve.
 - Google Kalender über ein **Dienstkonto** (auch für private Kalender); alternativ API-Schlüssel
   für öffentliche Kalender. Mehrere Kalender-IDs mit Komma getrennt.
-- Todoist-Aufgaben (Filter einstellbar, Standard `today | overdue`), höchstens 5 Einträge.
+- Google-Termine: nur **heute**, die **nächsten drei** (beendete Termine entfallen). Gibt es keine mehr, steht dort
+  „Keine weiteren Termine“.
+- Todoist-Aufgaben (Filter einstellbar, Standard `today | overdue`): bis zu **8**, so viele wie nach den Terminen
+  noch Platz haben, der Rest erscheint als „+N weitere“. Jeder Eintrag darf zwei Zeilen belegen.
+- Lange Wörter werden nach Silben getrennt („Urlaubs-tage“), damit die Zeilen voll werden. Die Regeln sind
+  vereinfacht und kennen kein Wörterbuch, einzelne Trennungen können deshalb nicht ganz richtig sein.
 - Deutsche Oberfläche mit Umlauten, große Schrift, Zeilenumbruch bei langen Titeln.
-- Die verwendete Wetterquelle steht unten links im Bild.
+- Unten steht eine Zeile „Stand: 24. Oktober '26, 20:34 CEST“ (CET im Winter).
 
 ## Einrichtung
 1. **Google:** Calendar API im Google-Cloud-Projekt aktivieren, ein Dienstkonto anlegen, einen
@@ -44,7 +49,7 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
 
 ## Anpassen
 Orte, Zeitzone, Anzahl der Aufgaben und der obere Rand stehen oben in `src/index.js` (`HOME`, `SECOND`,
-`TIMEZONE`, `MAX_TASKS`, `TOP_MARGIN`). Die Namen werden in Großbuchstaben mit höchstens 9 Zeichen
+`TIMEZONE`, `MAX_EVENTS`, `MAX_TASKS`, `TOP_MARGIN`). Die Namen werden in Großbuchstaben mit höchstens 9 Zeichen
 angezeigt.
 
 ## Datenschutz und Sicherheit

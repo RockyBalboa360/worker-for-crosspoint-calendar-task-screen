@@ -51,11 +51,14 @@ const SECOND = { key: "frankfurt", name: "FRANKFURT", lat: 50.1109, lon: 8.6821 
 const TIMEZONE = "Europe/Berlin";
 
 // Maximal so viele Todoist-Aufgaben anzeigen (weitere erscheinen als "+N weitere")
-const MAX_TASKS = 5;
+const MAX_TASKS = 8;
 
-// Leerer Streifen am oberen Bildrand in Pixeln (14 Pixel sind am X4 Pro etwa 1,6 mm), weil der Gehäuserand
+// Von den heutigen Terminen werden nur die nächsten so vielen gezeigt (bereits beendete Termine entfallen).
+const MAX_EVENTS = 3;
+
+// Leerer Streifen am oberen Bildrand in Pixeln (10 Pixel sind am X4 Pro etwa 1,2 mm), weil der Gehäuserand
 // die oberste Zeile sonst anschneidet.
-const TOP_MARGIN = 14;
+const TOP_MARGIN = 10;
 
 // ============================================================================
 //  Ab hier muss nichts mehr geändert werden
@@ -102,6 +105,7 @@ const TIME_FORMAT = new Intl.DateTimeFormat("de-DE", {
   hourCycle: "h23",
 });
 
+const MONTH_LONG = ["Januar", "Februar", "M\u00E4rz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 const DAY_NAMES = ["SONNTAG", "MONTAG", "DIENSTAG", "MITTWOCH", "DONNERSTAG", "FREITAG", "SAMSTAG"];
 const MONTH_SHORT = ["JAN", "FEB", "M\u00C4R", "APR", "MAI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEZ"];
 
@@ -132,6 +136,26 @@ function startOfDay(now, addDays = 0) {
   const localMidnightAsUtc = Date.UTC(p.year, p.month - 1, p.day + addDays);
   const approx = new Date(localMidnightAsUtc - tzOffsetMs(now));
   return new Date(localMidnightAsUtc - tzOffsetMs(approx));
+}
+
+// "CET" im Winter, "CEST" im Sommer (für andere Zeitzonen die Kurzbezeichnung von Intl)
+function timezoneAbbreviation(date) {
+  if (TIMEZONE === "Europe/Berlin") {
+    const hours = tzOffsetMs(date) / 3600000;
+    if (hours === 2) return "CEST";
+    if (hours === 1) return "CET";
+  }
+  const part = new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, timeZoneName: "short" })
+    .formatToParts(date)
+    .find((x) => x.type === "timeZoneName");
+  return part ? part.value : "";
+}
+
+// z.B. "24. Oktober '26, 20:34 CEST"
+function formatStamp(date) {
+  const p = zonedParts(date);
+  const year = String(p.year % 100).padStart(2, "0");
+  return `${p.day}. ${MONTH_LONG[p.month - 1]} '${year}, ${TIME_FORMAT.format(date)} ${timezoneAbbreviation(date)}`.trim();
 }
 
 function isoDay(p) {
@@ -479,10 +503,12 @@ async function fetchOneCalendar(calendarId, auth, dayStart, dayEnd) {
     const startIso = item.start && item.start.dateTime;
     const start = startIso ? new Date(startIso) : null;
     if (start && start >= dayStart) {
-      events.push({ title, time: TIME_FORMAT.format(start), sort: start.getTime() });
+      const endIso = item.end && item.end.dateTime;
+      const end = endIso ? new Date(endIso).getTime() : start.getTime() + 3600000;
+      events.push({ title, time: TIME_FORMAT.format(start), sort: start.getTime(), end });
     } else {
-      // ganztägig oder schon vor heute gestartet
-      events.push({ title, time: "Ganztag", sort: -1 });
+      // ganztägig oder schon vor heute gestartet: bleibt den ganzen Tag stehen
+      events.push({ title, time: "Ganztag", sort: -1, end: Infinity });
     }
   }
   return events;
@@ -494,12 +520,12 @@ async function fetchCalendarEvents(env, now) {
   const ids = setting(env, "GOOGLE_CALENDAR_ID").split(",").map((s) => s.trim()).filter(Boolean);
   const useServiceAccount = Boolean(sa.email && sa.key);
   if (ids.length === 0) {
-    return { events: [], error: "Kalender-ID fehlt" };
+    return { events: [], total: 0, error: "Kalender-ID fehlt" };
   }
   if (!useServiceAccount && !apiKey) {
-    if (sa.email && !sa.key) return { events: [], error: "Privater Schlüssel fehlt" };
-    if (sa.key && !sa.email) return { events: [], error: "Dienstkonto-E-Mail fehlt" };
-    return { events: [], error: "Dienstkonto nicht eingetragen" };
+    if (sa.email && !sa.key) return { events: [], total: 0, error: "Privater Schlüssel fehlt" };
+    if (sa.key && !sa.email) return { events: [], total: 0, error: "Dienstkonto-E-Mail fehlt" };
+    return { events: [], total: 0, error: "Dienstkonto nicht eingetragen" };
   }
 
   let auth = { apiKey };
@@ -508,7 +534,7 @@ async function fetchCalendarEvents(env, now) {
       auth = { token: await getGoogleAccessToken(sa.email, sa.key) };
     } catch (error) {
       console.error("Google-Anmeldung fehlgeschlagen:", error);
-      return { events: [], error: sanitize(error.message || "Google-Login fehlgeschlagen") };
+      return { events: [], total: 0, error: sanitize(error.message || "Google-Login fehlgeschlagen") };
     }
   }
 
@@ -518,7 +544,7 @@ async function fetchCalendarEvents(env, now) {
   const ok = results.filter((r) => r.status === "fulfilled");
   if (ok.length === 0) {
     const reason = results[0].reason;
-    return { events: [], error: sanitize(reason && reason.message ? reason.message : "Kalender-Fehler") };
+    return { events: [], total: 0, error: sanitize(reason && reason.message ? reason.message : "Kalender-Fehler") };
   }
   // Termine, die in mehreren Kalendern stehen, nur einmal anzeigen
   const seen = new Set();
@@ -531,7 +557,9 @@ async function fetchCalendarEvents(env, now) {
       return true;
     })
     .sort((a, b) => a.sort - b.sort);
-  return { events, error: null };
+  // nur Termine, die noch nicht zu Ende sind, und davon die nächsten MAX_EVENTS
+  const upcoming = events.filter((ev) => ev.end > now.getTime()).slice(0, MAX_EVENTS);
+  return { events: upcoming, total: events.length, error: null };
 }
 
 // ---------- Todoist ---------------------------------------------------------
@@ -643,6 +671,8 @@ function createBMP(width, height, pixelData) {
 const INK_BLACK = 0;
 const DARK_GRAY = 64;
 const LIGHT_GRAY = 176;
+const FOOTER_TEXT = 48; // dunkles Grau für die Fußzeile (0 wäre Schwarz)
+const FOOTER_SCALE = 1.5; // Schriftgröße der Fußzeile
 const PAPER_WHITE = 255;
 
 // 8x8-Bitmap-Font (jede Zahl = eine Pixelzeile, Bit 7 = ganz links)
@@ -897,13 +927,16 @@ function drawWeatherIcon(pixels, width, x, y, code) {
 
 // ---------- Layout ------------------------------------------------------------
 const MARGIN = 24;
-const BODY = 2.5; // Schriftgröße für Termine, Aufgaben und Wetterbeschreibung (20 Pixel pro Zeichen)
-const LINE_H = 24; // Zeilenabstand im Fließtext
+const BODY = 2.25; // Schriftgröße für Termine, Aufgaben und Wetterbeschreibung (18 Pixel pro Zeichen)
+const TEMP_SCALE = 6; // Größe der Temperatur (Ziffern 48 Pixel hoch)
+const DEGREE_SCALE = 2.5; // Größe von "°C" hinter der Temperatur
+const COND_Y = 114; // erste Zeile der Wetterbeschreibung
+const LINE_H = 22; // Zeilenabstand im Fließtext
 const ROW_PAD = 10; // Abstand pro Eintrag inkl. Trennlinie
-const MORE_H = 32; // Höhe der Zeile "+N weitere"
+const MORE_H = 30; // Höhe der Zeile "+N weitere"
 const SECTION_HEADER_H = 34;
 const SECTION_GAP = 16;
-const FOOTER_H = 38;
+const FOOTER_H = 40;
 
 const rowHeight = (lines) => lines * LINE_H + ROW_PAD;
 
@@ -917,29 +950,81 @@ function tokenize(text) {
   return tokens;
 }
 
-// Bricht Text in höchstens maxLines Zeilen um; zu lange Wörter werden mit "-" getrennt,
-// was darüber hinausgeht, wird mit "..." abgeschnitten.
+// ---------- Silbentrennung (vereinfachte Regeln für Deutsch) ------------------------
+const VOWELS = "aeiouäöüy";
+// Konsonantengruppen, die zusammen am Anfang einer Silbe stehen (längste zuerst)
+const ONSETS = ["schr", "schl", "schm", "schn", "schw", "str", "spr", "sch", "ch", "ck", "ph", "th", "qu",
+  "pl", "bl", "kl", "gl", "fl", "pr", "br", "tr", "dr", "kr", "gr", "fr"];
+// Vorsilben, die auch vor einem Vokal abgetrennt werden ("Mit-arbeiter", "Auf-enthalt")
+const PREFIXES = ["mit", "ab", "an", "auf", "aus", "ein", "nach", "vor", "zu", "um", "über", "unter", "hin", "her", "dar"];
+
+// Mögliche Trennstellen eines Wortes: Index des Zeichens, vor dem getrennt werden darf.
+function hyphenPoints(word) {
+  const w = word.toLowerCase();
+  if (w.length < 6) return [];
+  const isVowel = (i) => VOWELS.includes(w[i]);
+  const points = [];
+  let i = 0;
+  while (i < w.length) {
+    while (i < w.length && isVowel(i)) i++;
+    const runStart = i;
+    while (i < w.length && !isVowel(i)) i++;
+    const runEnd = i;
+    if (runStart === 0 || runEnd >= w.length || runEnd === runStart) continue; // Wortanfang/-ende: nicht trennen
+    const run = w.slice(runStart, runEnd);
+    let cut = runEnd - 1; // sonst vor dem letzten Konsonanten: "Fens-ter", "Kar-te"
+    if (run.length === 1 && PREFIXES.includes(w.slice(0, runEnd))) {
+      cut = runEnd; // Vorsilbe bleibt zusammen: "Auf-enthalt"
+    } else {
+      const onset = ONSETS.find((o) => run.endsWith(o));
+      if (onset) cut = runEnd - onset.length;
+    }
+    if (cut >= 2 && w.length - cut >= 3) points.push(cut);
+  }
+  return points;
+}
+
+// Größte Trennstelle, bei der der Wortanfang plus "-" noch in `room` Zeichen passt (0 = keine).
+function hyphenCut(piece, room) {
+  const core = (piece.match(/^[A-Za-z\u00C4\u00D6\u00DC\u00E4\u00F6\u00FC\u00DF]+/) || [""])[0];
+  if (core.length < 6 || piece.length - core.length > 2) return 0;
+  let best = 0;
+  for (const p of hyphenPoints(core)) if (p <= room) best = p;
+  return best;
+}
+
+// Bricht Text in höchstens maxLines Zeilen um. Lange Wörter werden nach Silben getrennt, damit die Zeilen
+// voll werden; was darüber hinausgeht, wird mit "..." abgeschnitten.
 function wrapText(text, maxWidth, scale, maxLines) {
   const maxChars = Math.floor(maxWidth / (8 * scale));
+  const len = (t) => [...t].length;
   const lines = [];
   let line = "";
   for (const tok of tokenize(text)) {
     let piece = tok.text;
-    const sep = line && !tok.glue ? " " : "";
-    if ([...(line + sep + piece)].length <= maxChars) {
-      line += sep + piece;
-      continue;
+    let glue = tok.glue;
+    for (let guard = 0; piece && guard < 60; guard++) {
+      const sep = line && !glue ? " " : "";
+      if (len(line + sep + piece) <= maxChars) {
+        line += sep + piece;
+        piece = "";
+        break;
+      }
+      const cut = hyphenCut(piece, maxChars - len(line + sep) - 1);
+      if (cut > 0) {
+        lines.push(line + sep + piece.slice(0, cut) + "-");
+        line = "";
+        piece = piece.slice(cut);
+      } else if (line) {
+        lines.push(line);
+        line = "";
+      } else {
+        const chars = [...piece]; // kein Silbenumbruch möglich: hart trennen
+        lines.push(chars.slice(0, maxChars - 1).join("") + "-");
+        piece = chars.slice(maxChars - 1).join("");
+      }
+      glue = false;
     }
-    if (line) {
-      lines.push(line);
-      line = "";
-    }
-    while ([...piece].length > maxChars) {
-      const chars = [...piece];
-      lines.push(chars.slice(0, maxChars - 1).join("") + "-");
-      piece = chars.slice(maxChars - 1).join("");
-    }
-    line = piece;
   }
   if (line) lines.push(line);
   if (lines.length > maxLines) {
@@ -994,20 +1079,20 @@ function drawWeatherPanel(pixels, width, x, panelW, name, weather, condLines, hi
   drawWeatherIcon(pixels, width, x + panelW - ICON_SIZE, 2, weather.conditionCode);
 
   const temp = unavailable ? "--" : `${weather.temperature}`;
-  let tempScale = 7;
-  while (tempScale > 5 && getTextWidth(temp, tempScale) + 48 > panelW) tempScale--;
+  let tempScale = TEMP_SCALE;
+  while (tempScale > 4 && getTextWidth(temp, tempScale) + 16 * DEGREE_SCALE > panelW) tempScale--;
   const tw = getTextWidth(temp, tempScale);
-  drawText(pixels, width, x, 60, temp, INK_BLACK, tempScale, true);
-  drawText(pixels, width, x + tw, 60, "°", INK_BLACK, 3, true);
-  drawText(pixels, width, x + tw + 24, 60, "C", INK_BLACK, 3, true);
+  drawText(pixels, width, x, 58, temp, INK_BLACK, tempScale, true);
+  drawText(pixels, width, x + tw, 58, "°", INK_BLACK, DEGREE_SCALE, true);
+  drawText(pixels, width, x + tw + 8 * DEGREE_SCALE, 58, "C", INK_BLACK, DEGREE_SCALE, true);
 
   condLines.forEach((line, i) => {
-    drawText(pixels, width, x, 124 + i * LINE_H, line, INK_BLACK, BODY, true);
+    drawText(pixels, width, x, COND_Y + i * LINE_H, line, INK_BLACK, BODY, true);
   });
 
   if (!unavailable && weather.temperatureHigh !== null && weather.temperatureHigh !== undefined) {
     const hiLo = `↓${weather.temperatureLow}° ↑${weather.temperatureHigh}°`;
-    const scale = getTextWidth(hiLo, 3) <= panelW ? 3 : BODY;
+    const scale = BODY; // gleiche Größe wie die Wetterbeschreibung
     drawText(pixels, width, x, hiLoY, hiLo, INK_BLACK, scale, true);
   }
 }
@@ -1022,8 +1107,8 @@ function renderDisplay(width, height, weathers, calendar, todoist, now) {
   // --- Wetter: zwei gleich große Felder nebeneinander ---
   const panelW = 208;
   const cond = weathers.map((w) => wrapText(w.condition, panelW, BODY, 2));
-  const hiLoY = 124 + Math.max(cond[0].length, cond[1].length, 1) * LINE_H + 8;
-  const weatherEndY = hiLoY + 34;
+  const hiLoY = COND_Y + Math.max(cond[0].length, cond[1].length, 1) * LINE_H + 6;
+  const weatherEndY = hiLoY + 32;
   drawWeatherPanel(pixels, width, MARGIN, panelW, HOME.name, weathers[0], cond[0], hiLoY);
   drawWeatherPanel(pixels, width, width - MARGIN - panelW, panelW, SECOND.name, weathers[1], cond[1], hiLoY);
   fillRect(pixels, width, height, Math.floor(width / 2) - 1, 12, 2, weatherEndY - 20, LIGHT_GRAY);
@@ -1049,29 +1134,27 @@ function renderDisplay(width, height, weathers, calendar, todoist, now) {
     return { time: ev.time, lines, lineCount: Math.max(lines.length, 1) };
   });
 
-  const taskTextX = MARGIN + 32;
+  const taskTextX = MARGIN + 30;
   const taskRows = todoist.tasks.map((task) => {
     const text = task.when ? `${task.when} ${task.title}` : task.title;
     const lines = wrapText(text, width - MARGIN - taskTextX, BODY, 2);
     return { lines, lineCount: Math.max(lines.length, 1), bold: task.priority === 4 };
   });
 
-  // --- Platz verteilen: Aufgaben behalten mindestens zwei Einträge ---
+  // --- Platz verteilen: Termine bekommen, was sie brauchen (höchstens MAX_EVENTS), Aufgaben den Rest ---
   let y = weatherEndY + 58;
   const avail = maxContentY - y - 2 * SECTION_HEADER_H - SECTION_GAP;
   let evPlan;
   if (eventRows.length === 0) {
-    const row = emptyRow(calendar.error || "Keine Termine heute");
+    const message = calendar.error || (calendar.total > 0 ? "Keine weiteren Termine" : "Keine Termine heute");
+    const row = emptyRow(message);
     evPlan = { shown: [row], hidden: 0, used: rowHeight(row.lineCount), empty: true };
   } else {
-    let reserve = 0;
-    if (taskRows.length === 0) {
-      reserve = rowHeight(1);
-    } else {
-      reserve = taskRows.slice(0, 2).reduce((sum, r) => sum + rowHeight(r.lineCount), 0);
-      if (taskRows.length > 2) reserve += MORE_H;
-    }
-    evPlan = planRows(eventRows, avail - reserve, Infinity);
+    evPlan = {
+      shown: eventRows,
+      hidden: 0,
+      used: eventRows.reduce((sum, r) => sum + rowHeight(r.lineCount), 0),
+    };
   }
   let taskPlan;
   if (taskRows.length === 0) {
@@ -1102,18 +1185,17 @@ function renderDisplay(width, height, weathers, calendar, todoist, now) {
       row.lines.forEach((line, i) => drawText(pixels, width, MARGIN, rowY + i * LINE_H, line, INK_BLACK, BODY));
       return;
     }
-    drawBox(pixels, width, MARGIN, rowY + 1, 20, INK_BLACK);
+    drawBox(pixels, width, MARGIN, rowY + 1, 18, INK_BLACK);
     row.lines.forEach((line, i) => {
       drawText(pixels, width, taskTextX, rowY + i * LINE_H, line, INK_BLACK, BODY, row.bold);
     });
   });
 
   // --- Fußzeile ---
-  const footerY = height - 22;
-  drawHLine(pixels, width, footerY - 8, MARGIN, width - MARGIN, LIGHT_GRAY, 1);
-  drawRightAlignedText(pixels, width, footerY, `Stand ${TIME_FORMAT.format(now)}`, DARK_GRAY, 1, MARGIN);
-  const sources = [...new Set(weathers.map((w) => w.source).filter(Boolean))].join(", ");
-  if (sources) drawText(pixels, width, MARGIN, footerY, `Wetter: ${sources}`, DARK_GRAY, 1);
+  // eine Zeile in etwas größerer, dunkelgrauer Schrift: "Stand: 24. Oktober '26, 20:34 CEST"
+  const footerY = height - 20;
+  drawHLine(pixels, width, footerY - 10, MARGIN, width - MARGIN, LIGHT_GRAY, 1);
+  drawText(pixels, width, MARGIN, footerY, `Stand: ${formatStamp(now)}`, FOOTER_TEXT, FOOTER_SCALE);
 
   return pixels;
 }
