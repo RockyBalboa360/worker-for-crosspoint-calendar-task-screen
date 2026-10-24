@@ -43,8 +43,8 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
    [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen).
 
 ## Anpassen
-Orte, Zeitzone und Anzahl der Aufgaben stehen oben in `src/index.js` (`HOME`, `SECOND`,
-`TIMEZONE`, `MAX_TASKS`). Die Namen werden in Großbuchstaben mit höchstens 9 Zeichen
+Orte, Zeitzone, Anzahl der Aufgaben und der obere Rand stehen oben in `src/index.js` (`HOME`, `SECOND`,
+`TIMEZONE`, `MAX_TASKS`, `TOP_MARGIN`). Die Namen werden in Großbuchstaben mit höchstens 9 Zeichen
 angezeigt.
 
 ## Datenschutz und Sicherheit

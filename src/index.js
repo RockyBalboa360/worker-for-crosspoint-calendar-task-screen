@@ -53,6 +53,10 @@ const TIMEZONE = "Europe/Berlin";
 // Maximal so viele Todoist-Aufgaben anzeigen (weitere erscheinen als "+N weitere")
 const MAX_TASKS = 5;
 
+// Leerer Streifen am oberen Bildrand in Pixeln (14 Pixel sind am X4 Pro etwa 1,6 mm), weil der Gehäuserand
+// die oberste Zeile sonst anschneidet.
+const TOP_MARGIN = 14;
+
 // ============================================================================
 //  Ab hier muss nichts mehr geändert werden
 // ============================================================================
@@ -1130,7 +1134,10 @@ export default {
       fetchTodoistTasks(env, now),
     ]);
 
-    const pixels = renderDisplay(width, height, [weatherHome, weatherSecond], calendar, todoist, now);
+    // Inhalt in der um den Rand verkleinerten Höhe zeichnen und unter dem leeren Streifen einsetzen
+    const content = renderDisplay(width, height - TOP_MARGIN, [weatherHome, weatherSecond], calendar, todoist, now);
+    const pixels = new Uint8Array(width * height).fill(PAPER_WHITE);
+    pixels.set(content, TOP_MARGIN * width);
     const bmp = createBMP(width, height, pixels);
 
     return new Response(bmp, {
