@@ -53,8 +53,18 @@ const TIMEZONE = "Europe/Berlin";
 // Maximal so viele Todoist-Aufgaben anzeigen (weitere erscheinen als "+N weitere")
 const MAX_TASKS = 8;
 
-// Von den heutigen Terminen werden nur die nächsten so vielen gezeigt (bereits beendete Termine entfallen).
-const MAX_EVENTS = 3;
+// Höchstens so viele heutige Termine anzeigen (bereits beendete Termine entfallen).
+const MAX_EVENTS = 10;
+
+// Wer bekommt den Platz zuerst? Einstellbar mit ?priority=...&count=N in der Abruf-URL (die Firmware hängt beides
+// an) oder als Worker-Variablen LAYOUT_PRIORITY / LAYOUT_COUNT:
+//   events    alle Termine, die Aufgaben bekommen den Rest
+//   events_n  genau N Termine, die Aufgaben bekommen den Rest (Standard)
+//   tasks_n   genau N Aufgaben, die Termine bekommen den Rest
+//   tasks     alle Aufgaben, die Termine bekommen den Rest
+const PRIORITIES = ["events", "events_n", "tasks_n", "tasks"];
+const DEFAULT_PRIORITY = "events_n";
+const DEFAULT_COUNT = 3;
 
 // Leerer Streifen am oberen Bildrand in Pixeln (10 Pixel sind am X4 Pro etwa 1,2 mm), weil der Gehäuserand
 // die oberste Zeile sonst anschneidet.
@@ -557,8 +567,8 @@ async function fetchCalendarEvents(env, now) {
       return true;
     })
     .sort((a, b) => a.sort - b.sort);
-  // nur Termine, die noch nicht zu Ende sind, und davon die nächsten MAX_EVENTS
-  const upcoming = events.filter((ev) => ev.end > now.getTime()).slice(0, MAX_EVENTS);
+  // nur Termine, die noch nicht zu Ende sind
+  const upcoming = events.filter((ev) => ev.end > now.getTime());
   return { events: upcoming, total: events.length, error: null };
 }
 
@@ -1034,6 +1044,15 @@ function wrapText(text, maxWidth, scale, maxLines) {
   return lines;
 }
 
+function parseLayout(env, params) {
+  const priority = String(params.get("priority") || setting(env, "LAYOUT_PRIORITY") || DEFAULT_PRIORITY).toLowerCase();
+  const count = parseInt(params.get("count") || setting(env, "LAYOUT_COUNT"), 10);
+  return {
+    priority: PRIORITIES.includes(priority) ? priority : DEFAULT_PRIORITY,
+    count: Number.isFinite(count) ? Math.min(Math.max(count, 1), MAX_TASKS) : DEFAULT_COUNT,
+  };
+}
+
 // Wählt, welche Einträge in die verfügbare Höhe passen (Rest wird zu "+N weitere")
 function planRows(rows, availPx, maxItems) {
   const shown = [];
@@ -1097,7 +1116,7 @@ function drawWeatherPanel(pixels, width, x, panelW, name, weather, condLines, hi
   }
 }
 
-function renderDisplay(width, height, weathers, calendar, todoist, now) {
+function renderDisplay(width, height, weathers, calendar, todoist, now, layout) {
   const pixels = new Uint8Array(width * height);
   pixels.fill(PAPER_WHITE);
   const ctx = { pixels, width, height };
@@ -1141,28 +1160,35 @@ function renderDisplay(width, height, weathers, calendar, todoist, now) {
     return { lines, lineCount: Math.max(lines.length, 1), bold: task.priority === 4 };
   });
 
-  // --- Platz verteilen: Termine bekommen, was sie brauchen (höchstens MAX_EVENTS), Aufgaben den Rest ---
+  // --- Platz verteilen: die bevorzugte Rubrik wird zuerst geplant, die andere bekommt den Rest ---
   let y = weatherEndY + 58;
   const avail = maxContentY - y - 2 * SECTION_HEADER_H - SECTION_GAP;
-  let evPlan;
-  if (eventRows.length === 0) {
-    const message = calendar.error || (calendar.total > 0 ? "Keine weiteren Termine" : "Keine Termine heute");
-    const row = emptyRow(message);
-    evPlan = { shown: [row], hidden: 0, used: rowHeight(row.lineCount), empty: true };
-  } else {
-    evPlan = {
-      shown: eventRows,
-      hidden: 0,
-      used: eventRows.reduce((sum, r) => sum + rowHeight(r.lineCount), 0),
-    };
-  }
-  let taskPlan;
-  if (taskRows.length === 0) {
-    const row = emptyRow(todoist.error || "Keine Aufgaben heute");
-    taskPlan = { shown: [row], hidden: 0, empty: true };
-  } else {
-    taskPlan = planRows(taskRows, avail - evPlan.used, MAX_TASKS);
-  }
+
+  const sections = {
+    events: {
+      rows: eventRows,
+      emptyMessage: calendar.error || (calendar.total > 0 ? "Keine weiteren Termine" : "Keine Termine heute"),
+      max: MAX_EVENTS,
+    },
+    tasks: { rows: taskRows, emptyMessage: todoist.error || "Keine Aufgaben heute", max: MAX_TASKS },
+  };
+  const minHeight = (sec) => (sec.rows.length ? MORE_H : rowHeight(emptyRow(sec.emptyMessage).lineCount));
+  const plan = (sec, availPx, limit) => {
+    if (sec.rows.length === 0) {
+      const row = emptyRow(sec.emptyMessage);
+      return { shown: [row], hidden: 0, used: rowHeight(row.lineCount), empty: true };
+    }
+    return planRows(sec.rows.slice(0, limit), availPx, sec.max);
+  };
+
+  const firstKey = layout.priority.startsWith("tasks") ? "tasks" : "events";
+  const secondKey = firstKey === "tasks" ? "events" : "tasks";
+  const firstLimit = layout.priority.endsWith("_n") ? layout.count : sections[firstKey].max;
+  const plans = {};
+  plans[firstKey] = plan(sections[firstKey], avail - minHeight(sections[secondKey]), firstLimit);
+  plans[secondKey] = plan(sections[secondKey], avail - plans[firstKey].used, sections[secondKey].max);
+  const evPlan = plans.events;
+  const taskPlan = plans.tasks;
 
   // --- Termine ---
   y = drawSectionHeader(ctx, y, "TERMINE");
@@ -1217,7 +1243,8 @@ export default {
     ]);
 
     // Inhalt in der um den Rand verkleinerten Höhe zeichnen und unter dem leeren Streifen einsetzen
-    const content = renderDisplay(width, height - TOP_MARGIN, [weatherHome, weatherSecond], calendar, todoist, now);
+    const layout = parseLayout(env, new URL(request.url).searchParams);
+    const content = renderDisplay(width, height - TOP_MARGIN, [weatherHome, weatherSecond], calendar, todoist, now, layout);
     const pixels = new Uint8Array(width * height).fill(PAPER_WHITE);
     pixels.set(content, TOP_MARGIN * width);
     const bmp = createBMP(width, height, pixels);

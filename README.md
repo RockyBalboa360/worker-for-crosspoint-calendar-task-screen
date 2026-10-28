@@ -52,6 +52,22 @@ Orte, Zeitzone, Anzahl der Aufgaben und der obere Rand stehen oben in `src/index
 `TIMEZONE`, `MAX_EVENTS`, `MAX_TASKS`, `TOP_MARGIN`). Die Namen werden in Großbuchstaben mit höchstens 9 Zeichen
 angezeigt.
 
+### Platz für Termine und Aufgaben
+Termine und Aufgaben teilen sich den Platz unter dem Wetter. Wer ihn zuerst bekommt, steuerst du mit zwei Parametern
+in der Abruf-URL (`https://…workers.dev/?priority=events_n&count=3`). Die Firmware aus dem Fork hängt sie nach den
+Einstellungen *Display → Calendar priority* und *Fixed count* automatisch an. Ohne Firmware-Einstellung kannst du sie
+als Worker-Variablen `LAYOUT_PRIORITY` und `LAYOUT_COUNT` setzen.
+
+| `priority`  | Wirkung |
+|-------------|---------|
+| `events`    | alle heutigen Termine, die Aufgaben bekommen den Rest |
+| `events_n`  | genau `count` Termine, die Aufgaben bekommen den Rest (Standard, `count` = 3) |
+| `tasks_n`   | genau `count` Aufgaben, die Termine bekommen den Rest |
+| `tasks`     | alle Aufgaben, die Termine bekommen den Rest |
+
+`count` liegt zwischen 1 und 8. Passt nicht alles in den Platz, steht am Ende der Rubrik „+N weitere“.
+Eine Rubrik ohne Einträge belegt nur eine Zeile.
+
 ## Datenschutz und Sicherheit
 - **Die Worker-URL ist öffentlich erreichbar.** Wer sie kennt, sieht deine Termine und
   Aufgaben. Gib sie nicht weiter und veröffentliche sie nicht.
