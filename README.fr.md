@@ -16,7 +16,7 @@ Un Cloudflare Worker qui génère une vue de la journée sous forme de **BMP en 
 
 **Deux parties qui vont ensemble :**
 - ☁️ **Serveur d'image** (ce dépôt) : [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
-- 🧩 **Firmware** pour l'appareil : [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **dernière version : [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)**
+- 🧩 **Firmware** pour l'appareil : [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **dernière version : [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
 
 ## Fonctionnalités
 - Météo : **Bright Sky** (données du Deutscher Wetterdienst, mesure de la station la plus proche) avec **Open-Meteo**
@@ -54,7 +54,7 @@ Un Cloudflare Worker qui génère une vue de la journée sous forme de **BMP en 
 5. Saisissez l'URL sur l'appareil. Cela fonctionne avec un firmware qui prend en charge l'écran de veille calendrier,
    par exemple le fork
    [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen)
-   (téléchargement dans ses [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)).
+   (téléchargement dans ses [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)).
 
 ## Personnalisation
 Les lieux, le fuseau horaire, le nombre de tâches et la marge supérieure se trouvent en haut de `src/index.js`

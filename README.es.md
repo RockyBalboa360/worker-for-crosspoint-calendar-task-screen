@@ -16,7 +16,7 @@ Un Cloudflare Worker que genera una vista del día como **BMP en escala de grise
 
 **Dos partes que van juntas:**
 - ☁️ **Servidor de imagen** (este repositorio): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
-- 🧩 **Firmware** del dispositivo: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **última versión: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)**
+- 🧩 **Firmware** del dispositivo: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **última versión: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
 
 ## Funciones
 - Tiempo: **Bright Sky** (datos del Servicio Meteorológico Alemán, medición de la estación más cercana) con
@@ -54,7 +54,7 @@ Un Cloudflare Worker que genera una vista del día como **BMP en escala de grise
 5. Introduce la URL en el dispositivo. Funciona con un firmware que admita la pantalla de reposo con calendario, por
    ejemplo el fork
    [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen)
-   (descarga en sus [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)).
+   (descarga en sus [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)).
 
 ## Personalización
 Los lugares, la zona horaria, el número de tareas y el margen superior están al principio de `src/index.js`

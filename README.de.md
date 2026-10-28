@@ -18,7 +18,7 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
 
 **Zwei Teile, die zusammengehören:**
 - ☁️ **Bildserver** (dieses Repository): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
-- 🧩 **Firmware** fürs Gerät: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **aktuelles Release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)**
+- 🧩 **Firmware** fürs Gerät: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **aktuelles Release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
 
 ## Funktionen
 - Wetter: **Bright Sky** (Daten des Deutschen Wetterdienstes, Messwert der nächsten Station)
@@ -55,7 +55,7 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
 5. Am Gerät die URL eintragen. Das geht mit einer Firmware, die den Kalender-Ruhebildschirm
    unterstützt, z. B. dem Fork
    [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen)
-   (Download unter [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)).
+   (Download unter [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)).
 
 ## Anpassen
 Orte, Zeitzone, Anzahl der Aufgaben und der obere Rand stehen oben in `src/index.js` (`HOME`, `SECOND`,

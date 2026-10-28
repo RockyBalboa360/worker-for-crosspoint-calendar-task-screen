@@ -16,7 +16,7 @@ Todoist. The image is meant as the sleep screen of the Xteink X4 / X4 Pro.
 
 **Two parts that belong together:**
 - ☁️ **Image server** (this repository): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
-- 🧩 **Firmware** for the device: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **latest release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)**
+- 🧩 **Firmware** for the device: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **latest release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
 
 ## Features
 - Weather: **Bright Sky** (German Weather Service data, measurement from the nearest station) with **Open-Meteo**
@@ -50,7 +50,7 @@ Todoist. The image is meant as the sleep screen of the Xteink X4 / X4 Pro.
    settings arrive (without the values themselves).
 5. Enter the URL on the device. This works with a firmware that supports the calendar sleep screen, for example the fork
    [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen)
-   (download in its [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases)).
+   (download in its [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)).
 
 ## Customizing
 Locations, time zone, number of tasks and the top margin are at the top of `src/index.js` (`HOME`, `SECOND`,
