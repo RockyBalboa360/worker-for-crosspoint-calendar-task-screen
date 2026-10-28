@@ -17,6 +17,7 @@ Un Cloudflare Worker que genera una vista del día como **BMP en escala de grise
 **Dos partes que van juntas:**
 - ☁️ **Servidor de imagen** (este repositorio): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
 - 🧩 **Firmware** del dispositivo: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **última versión: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
+- 🔌 **Alternativa sin firmware propio:** [plugin SD para el CrossPoint 2.0 oficial](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen)
 
 ## Funciones
 - Tiempo: **Bright Sky** (datos del Servicio Meteorológico Alemán, medición de la estación más cercana) con
@@ -80,6 +81,12 @@ del worker `LAYOUT_PRIORITY` y `LAYOUT_COUNT`.
   <img src="docs/layout-priorities.png" alt="Los cuatro diseños: events, events_n, tasks_n, tasks" width="100%"><br>
   <em>Los cuatro diseños (de izquierda a derecha): todos los eventos, 2 eventos, 3 tareas, todas las tareas</em>
 </p>
+
+### Lugares en la URL de la petición
+Los dos lugares también se pueden definir en cada petición: `?city1=Hamburg&lat1=53.5507&lon1=9.993&city2=Oldenburg&lat2=53.1435&lon2=8.2146`
+(`cityN` es el nombre, hasta 9 letras; `latN` y `lonN` son las coordenadas). Sin estos parámetros, o si no son válidos,
+se usan los lugares `HOME` y `SECOND` del principio de `src/index.js`. El
+[plugin SD](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen) para el CrossPoint 2.0 oficial los envía desde su página de ajustes.
 
 ## Privacidad y seguridad
 - **La URL del worker es accesible públicamente.** Quien la conozca puede ver tus eventos y tareas. No la compartas ni

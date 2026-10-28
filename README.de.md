@@ -19,6 +19,7 @@ Ruhebildschirm für den Xteink X4 / X4 Pro gedacht.
 **Zwei Teile, die zusammengehören:**
 - ☁️ **Bildserver** (dieses Repository): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
 - 🧩 **Firmware** fürs Gerät: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **aktuelles Release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
+- 🔌 **Alternative ohne eigene Firmware:** [SD-Plugin für das offizielle CrossPoint 2.0](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen)
 
 ## Funktionen
 - Wetter: **Bright Sky** (Daten des Deutschen Wetterdienstes, Messwert der nächsten Station)
@@ -82,6 +83,12 @@ Eine Rubrik ohne Einträge belegt nur eine Zeile.
   <img src="docs/layout-priorities.png" alt="Die vier Layouts: events, events_n, tasks_n, tasks" width="100%"><br>
   <em>Die vier Layouts (von links): alle Termine, 2 Termine, 3 Aufgaben, alle Aufgaben</em>
 </p>
+
+### Orte in der Abruf-URL
+Die beiden Orte lassen sich auch pro Abruf festlegen: `?city1=Hamburg&lat1=53.5507&lon1=9.993&city2=Oldenburg&lat2=53.1435&lon2=8.2146`
+(`cityN` ist der Name mit höchstens 9 Buchstaben, `latN` und `lonN` sind die Koordinaten). Fehlen die Parameter oder sind
+sie ungültig, gelten die Orte `HOME` und `SECOND` oben in `src/index.js`. Das
+[SD-Plugin](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen) für das offizielle CrossPoint 2.0 sendet sie von seiner Einstellungsseite aus.
 
 ## Datenschutz und Sicherheit
 - **Die Worker-URL ist öffentlich erreichbar.** Wer sie kennt, sieht deine Termine und

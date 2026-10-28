@@ -1053,6 +1053,20 @@ function parseLayout(env, params) {
   };
 }
 
+// Orte aus der Abruf-URL: ?city1=Hamburg&lat1=53.55&lon1=10.0&city2=Oldenburg&lat2=53.14&lon2=8.21
+// Fehlt etwas oder ist es ungültig, gilt der Ort aus HOME / SECOND oben.
+function parseLocation(params, n, fallback) {
+  const rawLat = params.get(`lat${n}`);
+  const rawLon = params.get(`lon${n}`);
+  const lat = rawLat ? Number(rawLat) : NaN;
+  const lon = rawLon ? Number(rawLon) : NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return fallback;
+  const rawName = params.get(`city${n}`) || "";
+  const name = rawName && !/[{}]/.test(rawName) ? sanitize(rawName.toUpperCase()).trim().slice(0, 9).trim() : "";
+  const key = `p${lat.toFixed(2)}_${lon.toFixed(2)}`.replace(/[^a-z0-9_]/gi, (c) => (c === "-" ? "m" : c === "." ? "d" : "x"));
+  return { key, name: name || `ORT ${n}`, lat: Number(lat.toFixed(4)), lon: Number(lon.toFixed(4)) };
+}
+
 // Wählt, welche Einträge in die verfügbare Höhe passen (Rest wird zu "+N weitere")
 function planRows(rows, availPx, maxItems) {
   const shown = [];
@@ -1116,7 +1130,7 @@ function drawWeatherPanel(pixels, width, x, panelW, name, weather, condLines, hi
   }
 }
 
-function renderDisplay(width, height, weathers, calendar, todoist, now, layout) {
+function renderDisplay(width, height, weathers, calendar, todoist, now, layout, locations = [HOME, SECOND]) {
   const pixels = new Uint8Array(width * height);
   pixels.fill(PAPER_WHITE);
   const ctx = { pixels, width, height };
@@ -1128,8 +1142,8 @@ function renderDisplay(width, height, weathers, calendar, todoist, now, layout) 
   const cond = weathers.map((w) => wrapText(w.condition, panelW, BODY, 2));
   const hiLoY = COND_Y + Math.max(cond[0].length, cond[1].length, 1) * LINE_H + 6;
   const weatherEndY = hiLoY + 32;
-  drawWeatherPanel(pixels, width, MARGIN, panelW, HOME.name, weathers[0], cond[0], hiLoY);
-  drawWeatherPanel(pixels, width, width - MARGIN - panelW, panelW, SECOND.name, weathers[1], cond[1], hiLoY);
+  drawWeatherPanel(pixels, width, MARGIN, panelW, locations[0].name, weathers[0], cond[0], hiLoY);
+  drawWeatherPanel(pixels, width, width - MARGIN - panelW, panelW, locations[1].name, weathers[1], cond[1], hiLoY);
   fillRect(pixels, width, height, Math.floor(width / 2) - 1, 12, 2, weatherEndY - 20, LIGHT_GRAY);
   drawHLine(pixels, width, weatherEndY, MARGIN, width - MARGIN, INK_BLACK, 3);
 
@@ -1235,16 +1249,27 @@ export default {
     const height = parseInt(env.DISPLAY_HEIGHT) || 800;
     const now = new Date();
 
+    const params = new URL(request.url).searchParams;
+    const locations = [parseLocation(params, 1, HOME), parseLocation(params, 2, SECOND)];
     const [weatherHome, weatherSecond, calendar, todoist] = await Promise.all([
-      fetchWeather(env, HOME),
-      fetchWeather(env, SECOND),
+      fetchWeather(env, locations[0]),
+      fetchWeather(env, locations[1]),
       fetchCalendarEvents(env, now),
       fetchTodoistTasks(env, now),
     ]);
 
     // Inhalt in der um den Rand verkleinerten Höhe zeichnen und unter dem leeren Streifen einsetzen
-    const layout = parseLayout(env, new URL(request.url).searchParams);
-    const content = renderDisplay(width, height - TOP_MARGIN, [weatherHome, weatherSecond], calendar, todoist, now, layout);
+    const layout = parseLayout(env, params);
+    const content = renderDisplay(
+      width,
+      height - TOP_MARGIN,
+      [weatherHome, weatherSecond],
+      calendar,
+      todoist,
+      now,
+      layout,
+      locations
+    );
     const pixels = new Uint8Array(width * height).fill(PAPER_WHITE);
     pixels.set(content, TOP_MARGIN * width);
     const bmp = createBMP(width, height, pixels);

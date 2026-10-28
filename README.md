@@ -17,6 +17,7 @@ Todoist. The image is meant as the sleep screen of the Xteink X4 / X4 Pro.
 **Two parts that belong together:**
 - ☁️ **Image server** (this repository): [worker-for-crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/worker-for-crosspoint-calendar-task-screen)
 - 🧩 **Firmware** for the device: [crosspoint-calendar-task-screen](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/tree/feature/calendar-sleep-screen), **latest release: [Releases](https://github.com/RockyBalboa360/crosspoint-calendar-task-screen/releases/latest)**
+- 🔌 **Alternative without custom firmware:** [SD plugin for the official CrossPoint 2.0](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen)
 
 ## Features
 - Weather: **Bright Sky** (German Weather Service data, measurement from the nearest station) with **Open-Meteo**
@@ -76,6 +77,12 @@ one line.
   <img src="docs/layout-priorities.png" alt="The four layouts: events, events_n, tasks_n, tasks" width="100%"><br>
   <em>The four layouts (left to right): all events, 2 events, 3 tasks, all tasks</em>
 </p>
+
+### Places in the request URL
+The two places can also be set per request: `?city1=Hamburg&lat1=53.5507&lon1=9.993&city2=Oldenburg&lat2=53.1435&lon2=8.2146`
+(`cityN` is the name, up to 9 letters, `latN` and `lonN` are the coordinates). Without these parameters, or if they are
+invalid, the places `HOME` and `SECOND` at the top of `src/index.js` are used. The
+[SD plugin](https://github.com/RockyBalboa360/CrossPoint-SDPlugin-weather-calendar-task-screen) for the official CrossPoint 2.0 sends them from its settings page.
 
 ## Privacy and security
 - **The worker URL is publicly reachable.** Anyone who knows it can see your events and tasks. Do not share or
